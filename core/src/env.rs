@@ -46,9 +46,14 @@ pub fn run_bounded(cmd: &mut Command, limit: Duration) -> Result<Output> {
     }
 }
 
+/// Not `/bin/kill -KILL -<pgid>`: procps-ng 4.0.4 (Ubuntu 24.04) reads `-17363` as `-1` and kills
+/// every process of the user.
 #[cfg(unix)]
 fn kill_group(pgid: u32) {
-    let _ = Command::new("/bin/kill").args(["-KILL", &format!("-{pgid}")]).stderr(Stdio::null()).status();
+    if let Ok(pgid @ 2..) = i32::try_from(pgid) {
+        // SAFETY: killpg only sends a signal; pgid is a child we spawned as a group leader.
+        unsafe { libc::killpg(pgid, libc::SIGKILL) };
+    }
 }
 
 #[cfg(not(unix))]
@@ -128,4 +133,22 @@ pub fn engine_command(bin: &Path, path: &str, empty_gh: &Path, cwd: &Path) -> Co
         .env("GH_CONFIG_DIR", empty_gh)
         .current_dir(cwd);
     cmd
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn run_bounded_kills_the_grandchild_and_spares_the_caller() {
+        let out = run_bounded(Command::new("sh").args(["-c", "sleep 30 & echo $!"]), Duration::from_secs(5)).unwrap();
+        let pid: i32 = String::from_utf8_lossy(&out.stdout).trim().parse().unwrap();
+        // SAFETY: signal 0 only checks that the process exists.
+        let alive = || unsafe { libc::kill(pid, 0) } == 0;
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while alive() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        assert!(!alive(), "grandchild {pid} survived");
+    }
 }
