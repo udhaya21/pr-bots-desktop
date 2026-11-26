@@ -56,6 +56,13 @@ jobs:
         shell: pwsh
         run: ci/tray-windows.ps1 out
 
+      # For experiments/linux-desktop-memory.sh on a real desktop.
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: prbots-phase0-linux-x86_64
+          path: target/release/prbots-phase0
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
