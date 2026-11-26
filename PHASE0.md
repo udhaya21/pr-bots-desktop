@@ -9,7 +9,7 @@ Decisions: Tauri 2 + Rust core, gh token first, conditional polls, subscription 
 |---|---|---|---|
 | Tray app (no window while it runs; one opened and closed at start for the memory test), spawns claude/codex/opencode, each returns a schema-valid ReviewResult | claude PASS, opencode PASS, **codex BLOCKED** (ChatGPT usage limit until Nov 30) | tray app ran and wrote its report; engines NOT RUN (no CLIs or fixture in CI) | same as Windows |
 | One secret saved and read through the OS keychain | PASS in one process (set, get, delete). Read across launches and signed builds not tested | PASS in one process, Credential Manager (tray app and terminal) | PASS in one process, Secret Service via an unlocked gnome-keyring (tray app). Terminal probe: no Secret Service, fails as expected |
-| Idle memory with window closed < 80 MB | PASS: a webview window opened and closed, then 60s idle: app 54 MB phys_footprint plus a 4 MB WebKit Networking helper. RSS 108-138 MB across readings, mostly shared system frameworks | unclear: app process 4.3 MB private, 28 MB working set; no WebView2 process left in its tree. Whether the window rendered is unverified | **not passed, unproven**: CI 92.5 MB private. Local VM: 83 MB private, of which 43 MB dirty; 61 MB with the DMA-BUF renderer off. Software GL only, no real desktop. See Linux memory below |
+| Idle memory with window closed < 80 MB (macOS phys_footprint, Linux private dirty plus swap; metric set 2026-11-26) | PASS: a webview window opened and closed, then 60s idle: app 54 MB phys_footprint plus a 4 MB WebKit Networking helper. RSS 108-138 MB across readings, mostly shared system frameworks | unclear: app process 4.3 MB private, 28 MB working set; no WebView2 process left in its tree. Whether the window rendered is unverified | **not passed, unproven**: local VM 43 MB private dirty, no swap (78-83 MB private across runs), under the bar, but software GL only, no real desktop. CI read 92.5 MB private; private dirty not read there. See Linux memory below |
 | Second Notifications call with If-None-Match returns 304 (one account; bar changed 2026-11-26) | PASS: 200 then 304, rate limit unchanged | not run (no user token in CI) | not run (no user token in CI) |
 | GUI launch finds the 3 CLIs | PASS: Finder launch inherits `/usr/bin:/bin:/usr/sbin:/sbin`, login-shell probe finds all 3 plus gh | partial: tray app inherits the runner PATH and finds gh; no CLIs installed; launched from a script, not Explorer | partial: login-shell probe finds gh; no CLIs installed; launched from a script, not a desktop session |
 | Usage-limit output of claude and opencode captured | claude PARTIAL: real limit lines recorded by pr-bots in text mode; raw `--output-format json` output not captured. **opencode NOT CAPTURED** | n/a | n/a |
@@ -23,6 +23,10 @@ missing, not git.
 
 - 304 item, 2026-11-26: one account instead of 2. The server answers 304 by comparing the ETag the client sends,
   so it is per request, not per account, and no second account is available.
+- Idle memory metric, 2026-11-26: Linux reads private dirty plus swap (`Private_Dirty` + `Swap` in `smaps_rollup`,
+  app plus its children), the nearest counterpart of macOS phys_footprint, which also counts swapped and compressed
+  pages. Clean private pages are left out because the kernel can drop
+  them; RSS is left out because it counts shared system libraries and fails on macOS too.
 
 ## Linux memory
 
@@ -47,9 +51,9 @@ The malloc_trim row was read at 180s.
   driver replaces the Mesa ones with its own, so this VM cannot say what a desktop shows.
 - Freed heap is the other lever: `malloc_trim(0)` after the window closed returned 14 MB of dirty heap.
 - Headless Wayland is worse (libLLVM 48 MB private), so Xvfb is not the reason CI read high.
-- The bar does not name a Linux metric. macOS passed on phys_footprint, which counts dirty memory, not clean pages;
-  the Linux counterpart is private dirty (43 MB). Plain `ps` RSS is 198 MB here and also failed on macOS.
-- Still needed: a reading on a real Ubuntu desktop with a GPU, and a decision on the metric.
+- The bar now reads private dirty (see Bar changes): 43 MB here. Plain `ps` RSS is 198 MB.
+- Still needed: a reading on a real Ubuntu desktop with a GPU. `experiments/linux-desktop-memory.sh`, run in the
+  desktop session, takes the CI binary and writes the same reading as JSON.
 
 ## Findings
 
@@ -112,4 +116,5 @@ osascript -e 'tell application "Finder" to open POSIX file "'$PWD'/../target/rel
 # report: ~/Library/Application Support/dev.prbots.phase0/phase0-report.json
 cargo run -p prbots-core --bin phase0 -- <data-dir>   # same probes from a terminal
 experiments/lockdown.sh <out-dir>                     # hostile-config experiments
+experiments/linux-desktop-memory.sh [binary]          # Linux idle memory, run inside a desktop session
 ```
