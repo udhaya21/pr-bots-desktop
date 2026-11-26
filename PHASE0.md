@@ -5,16 +5,19 @@ Decisions: Tauri 2 + Rust core, gh token first, conditional polls, subscription 
 
 ## Bar (plan claim 6.1)
 
-| Item | macOS | Windows 11 | Ubuntu 24.04 |
+| Item | macOS | Windows (CI, Server 2025) | Ubuntu 24.04 (CI) |
 |---|---|---|---|
-| Tray app (no window while it runs; one opened and closed at start for the memory test), spawns claude/codex/opencode, each returns a schema-valid ReviewResult | claude PASS, opencode PASS, **codex BLOCKED** (ChatGPT usage limit until Nov 30) | not run | not run |
-| One secret saved and read through the OS keychain | PASS in one process (set, get, delete). Read across launches and signed builds not tested | not run | not run |
-| Idle memory with window closed < 80 MB | PASS: a webview window opened and closed, then 60s idle: app 54 MB phys_footprint plus a 4 MB WebKit Networking helper. RSS 108-138 MB across readings, mostly shared system frameworks | not run | not run |
-| Second Notifications call with If-None-Match returns 304, on 2 accounts | 1 account only: 200 then 304, rate limit unchanged. **No second account** | not run | not run |
-| GUI launch finds the 3 CLIs | PASS: Finder launch inherits `/usr/bin:/bin:/usr/sbin:/sbin`, login-shell probe finds all 3 plus gh | not run | not run |
+| Tray app (no window while it runs; one opened and closed at start for the memory test), spawns claude/codex/opencode, each returns a schema-valid ReviewResult | claude PASS, opencode PASS, **codex BLOCKED** (ChatGPT usage limit until Nov 30) | tray app ran and wrote its report; engines NOT RUN (no CLIs or fixture in CI) | same as Windows |
+| One secret saved and read through the OS keychain | PASS in one process (set, get, delete). Read across launches and signed builds not tested | PASS in one process, Credential Manager (tray app and terminal) | PASS in one process, Secret Service via an unlocked gnome-keyring (tray app). Terminal probe: no Secret Service, fails as expected |
+| Idle memory with window closed < 80 MB | PASS: a webview window opened and closed, then 60s idle: app 54 MB phys_footprint plus a 4 MB WebKit Networking helper. RSS 108-138 MB across readings, mostly shared system frameworks | unclear: app process 4.3 MB private, 28 MB working set; no WebView2 process left in its tree. Whether the window rendered is unverified | **FAIL as measured**: app + WebKitNetworkProcess 92.5 MB private, 139.5 MB PSS, under Xvfb with no GPU (libEGL DRI3 warnings). Needs a real desktop to judge |
+| Second Notifications call with If-None-Match returns 304, on 2 accounts | 1 account only: 200 then 304, rate limit unchanged. **No second account** | not run (no user token in CI) | not run (no user token in CI) |
+| GUI launch finds the 3 CLIs | PASS: Finder launch inherits `/usr/bin:/bin:/usr/sbin:/sbin`, login-shell probe finds all 3 plus gh | partial: tray app inherits the runner PATH and finds gh; no CLIs installed; launched from a script, not Explorer | partial: login-shell probe finds gh; no CLIs installed; launched from a script, not a desktop session |
 | Usage-limit output of claude and opencode captured | claude PARTIAL: real limit lines recorded by pr-bots in text mode; raw `--output-format json` output not captured. **opencode NOT CAPTURED** | n/a | n/a |
 
-Phase 0 does not pass yet: codex, the second account, claude's JSON-mode limit, opencode's limit, and two OSes are open.
+Phase 0 does not pass yet: codex, the second account, claude's JSON-mode limit, opencode's limit, and on Windows and Ubuntu: engines, GUI-launch CLI
+discovery and the 304 item. Windows 11 itself and Linux memory on a real desktop are also open. CI evidence: run 45766070962 (artifacts
+`phase0-windows-latest`, `phase0-ubuntu-24.04`). In CI the engine error reads `spawn "git"` because the fixture dir is
+missing, not git.
 
 ## Findings
 
