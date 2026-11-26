@@ -1,0 +1,63 @@
+name: phase0
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phase0:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev xvfb dbus-x11 gnome-keyring
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+      # custom-protocol is what tauri-cli turns on for a release build: assets come from the binary.
+      - name: Build tray app
+        run: |
+          cargo build --release -p prbots-phase0 --features tauri/custom-protocol
+          cargo build --release -p prbots-core --bin phase0
+
+      # Linux: the terminal probe has no Secret Service, so its keychain item fails; the tray step has one.
+      - name: Terminal probes
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          mkdir -p out data
+          ./target/release/phase0 data > out/phase0-terminal.json
+          cat out/phase0-terminal.json
+
+      - name: Tray app (Linux)
+        if: runner.os == 'Linux'
+        run: ci/tray-linux.sh out
+
+      - name: Tray app (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ci/tray-windows.ps1 out
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase0-${{ matrix.os }}
+          path: out/
