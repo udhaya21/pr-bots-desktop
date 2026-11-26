@@ -1,0 +1,12 @@
+[package]
+name = "prbots-phase0"
+version = "0.0.0"
+edition = "2024"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+prbots-core = { path = "../core" }
+serde_json = "1"
+tauri = { version = "2", features = ["tray-icon"] }
