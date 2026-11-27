@@ -99,6 +99,9 @@ The malloc_trim row was read at 180s.
 
 - codex: ReviewResult spawn, `-s read-only` network test, and a direct keychain read under its sandbox, after Nov 30.
 - claude `--output-format json` limit output and opencode limit text: need real hits.
+- Linux idle memory: deferred (2026-11-27). Needs a real Ubuntu 24.04 desktop with a GPU to run
+  `experiments/linux-desktop-memory.sh`. The only tester at hand has an Apple silicon Mac, and the Linux VM tried
+  there (lima, see Linux memory above) renders with llvmpipe, no GPU.
 - Windows 11 and Ubuntu 24.04: `.github/workflows/phase0.yml` runs the probes, the tray app and the memory reading on
   `windows-latest` and `ubuntu-24.04`. `windows-latest` is Windows Server 2025, not Windows 11, so a pass there is
   evidence, not the bar. Xvfb has no tray host, so tray visibility on Linux stays unproven. CI installs no CLIs and
