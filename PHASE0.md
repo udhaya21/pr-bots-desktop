@@ -1,24 +1,26 @@
 # Phase 0 results
 
-Date: 2026-11-26. Machine: macOS 27.2 (Apple silicon). The bar names macOS 15 (was 14, see Bar changes).
-Nothing here ran on 15 yet; CI adds a `macos-15` job, not yet run.
+Date: 2026-11-26, updated 2026-11-28 (macOS 15 CI, Finding 10, bar change, AGENTS.md decision). Machine: macOS 27.2 (Apple silicon). The bar names macOS 15 (was 14, see Bar changes).
+macOS 15 ran in CI only (run 46109279889, macOS 15.8.2): tray app, keychain and idle memory.
 Decisions: Tauri 2 + Rust core, gh token first, conditional polls, subscription CLIs with a terms notice, manual publish.
 
 ## Bar (plan claim 6.1)
 
-| Item | macOS | Windows (CI, Server 2025) | Ubuntu 24.04 (CI) |
-|---|---|---|---|
-| Tray app (no window while it runs; one opened and closed at start for the memory test), spawns claude/codex/opencode, each returns a schema-valid ReviewResult | claude PASS, opencode PASS, **codex BLOCKED** (ChatGPT usage limit until Nov 30) | tray app ran and wrote its report; engines NOT RUN (no CLIs or fixture in CI) | same as Windows |
-| One secret saved and read through the OS keychain | PASS in one process (set, get, delete). Read across launches and signed builds not tested | PASS in one process, Credential Manager (tray app and terminal) | PASS in one process, Secret Service via an unlocked gnome-keyring (tray app). Terminal probe: no Secret Service, fails as expected |
-| Idle memory with window closed < 80 MB (macOS phys_footprint, Linux private dirty plus swap; metric set 2026-11-26) | PASS: a webview window opened and closed, then 60s idle: app 54 MB phys_footprint plus a 4 MB WebKit Networking helper. RSS 108-138 MB across readings, mostly shared system frameworks | unclear: app process 4.3 MB private, 28 MB working set; no WebView2 process left in its tree. Whether the window rendered is unverified | **not passed, unproven**: local VM 43 MB private dirty, no swap (78-83 MB private across runs), under the bar, but software GL only, no real desktop. CI read 92.5 MB private; private dirty not read there. See Linux memory below |
-| Second Notifications call with If-None-Match returns 304 (one account; bar changed 2026-11-26) | PASS: 200 then 304, rate limit unchanged | not run (no user token in CI) | not run (no user token in CI) |
-| GUI launch finds the 3 CLIs | PASS: Finder launch inherits `/usr/bin:/bin:/usr/sbin:/sbin`, login-shell probe finds all 3 plus gh | partial: tray app inherits the runner PATH and finds gh; no CLIs installed; launched from a script, not Explorer | partial: login-shell probe finds gh; no CLIs installed; launched from a script, not a desktop session |
-| Usage-limit output of claude and opencode captured | claude PARTIAL: real limit lines recorded by pr-bots in text mode; raw `--output-format json` output not captured. **opencode NOT CAPTURED** | n/a | n/a |
+| Item | macOS 27.2 (local) | macOS 15 (CI, 15.8.2) | Windows (CI, Server 2025) | Ubuntu 24.04 (CI) |
+|---|---|---|---|---|
+| Tray app (no window while it runs; one opened and closed at start for the memory test), spawns claude/codex/opencode, each returns a schema-valid ReviewResult | claude PASS, opencode PASS, **codex BLOCKED** (ChatGPT usage limit until Nov 30) | tray app ran and wrote its report; engines NOT RUN (no CLIs or fixture in CI) | tray app ran and wrote its report; engines NOT RUN (no CLIs or fixture in CI) | same as Windows |
+| One secret saved and read through the OS keychain | PASS in one process (set, get, delete). Read across launches and signed builds not tested | PASS in one process (tray app and terminal) | PASS in one process, Credential Manager (tray app and terminal) | PASS in one process, Secret Service via an unlocked gnome-keyring (tray app). Terminal probe: no Secret Service, fails as expected |
+| Idle memory with window closed < 80 MB (macOS phys_footprint, Linux private dirty plus swap; metric set 2026-11-26) | PASS: a webview window opened and closed, then 60s idle: app 54 MB phys_footprint plus a 4 MB WebKit Networking helper. RSS 108-138 MB across readings, mostly shared system frameworks | PASS on the number: app 15 MB phys_footprint plus a 5 MB WebKit Networking helper, 20 MB. The helper suggests the webview started; whether the window drew on the runner is unverified. Why the app reads 39 MB less than on 27.2 is not known; its peak was 16 MB, so the gap is not memory freed after close | unclear: app process 4.3 MB private, 28 MB working set; no WebView2 process left in its tree. Whether the window rendered is unverified | **not passed, unproven**: local VM 43 MB private dirty, no swap (78-83 MB private across runs), under the bar, but software GL only, no real desktop. CI read 92.5 MB private; private dirty not read there. See Linux memory below |
+| Second Notifications call with If-None-Match returns 304 (one account; bar changed 2026-11-26) | PASS: 200 then 304, rate limit unchanged | not run (no user token in CI) | not run (no user token in CI) | not run (no user token in CI) |
+| GUI launch finds the 3 CLIs | PASS: Finder launch inherits `/usr/bin:/bin:/usr/sbin:/sbin`, login-shell probe finds all 3 plus gh | partial: login-shell probe finds gh; no CLIs installed; launched from a script, not Finder | partial: tray app inherits the runner PATH and finds gh; no CLIs installed; launched from a script, not Explorer | partial: login-shell probe finds gh; no CLIs installed; launched from a script, not a desktop session |
+| Usage-limit output of claude and opencode captured | claude PARTIAL: real limit lines recorded by pr-bots in text mode; raw `--output-format json` output not captured. **opencode NOT CAPTURED** | n/a | n/a | n/a |
 
-Phase 0 does not pass yet: codex, claude's JSON-mode limit, opencode's limit, and on Windows and Ubuntu: engines, GUI-launch CLI
-discovery and the 304 item. Windows 11 itself, macOS 15 itself and Linux memory on a real desktop are also open. CI evidence: run 45766070962 (artifacts
-`phase0-windows-latest`, `phase0-ubuntu-24.04`). In CI the engine error reads `spawn "git"` because the fixture dir is
-missing, not git.
+Phase 0 does not pass yet: codex, claude's JSON-mode limit, opencode's limit, and on macOS 15, Windows and Ubuntu:
+engines, GUI-launch CLI discovery and the 304 item. Windows 11 itself (the Server 2025 idle-memory reading is also
+unclear), a macOS 15 memory reading with the window known to have drawn, Linux memory on a real desktop and tray
+visibility on Linux (Xvfb has no tray host) are also open. CI evidence: run 45766070962 (artifacts
+`phase0-windows-latest`, `phase0-ubuntu-24.04`) and run 46109279889 (artifact `phase0-macos-15`). In CI the engine
+error reads `spawn "git"` because the fixture dir is missing, not git.
 
 ## Bar changes
 
@@ -115,10 +117,11 @@ The malloc_trim row was read at 180s.
   `experiments/linux-desktop-memory.sh`. The only tester at hand has an Apple silicon Mac, and the Linux VM tried
   there (lima, see Linux memory above) renders with llvmpipe, no GPU.
 - Windows 11, Ubuntu 24.04 and macOS 15: `.github/workflows/phase0.yml` runs the probes, the tray app and the memory
-  reading on `windows-latest`, `ubuntu-24.04` and `macos-15`; the `macos-15` job has not run yet. `windows-latest` is
+  reading on `windows-latest`, `ubuntu-24.04` and `macos-15` (`macos-15` first ran in 46109279889). `windows-latest` is
   Windows Server 2025, not Windows 11, so a pass there is evidence, not the bar. Xvfb has no tray host, so tray
-  visibility on Linux stays unproven. CI installs no CLIs and builds no fixture, so the engine items stay open on all
-  three.
+  visibility on Linux stays unproven. CI installs no CLIs, builds no fixture and has no user token, so the engine
+  items, GUI launch and 304 stay open on all three. Neither the macOS 15 nor the Windows memory reading shows that the
+  window drew.
 - Windows signing: SignPath Foundation shows no country rule; needs an OSI licence, public repo, CI-built
   binaries, MFA, and names the Foundation as publisher. Licence is now MIT OR Apache-2.0 (both OSI). Not yet applied.
 
