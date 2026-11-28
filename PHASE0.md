@@ -1,6 +1,7 @@
 # Phase 0 results
 
-Date: 2026-11-26. Machine: macOS 27.2 (Apple silicon). The bar names macOS 14; nothing here ran on 14.
+Date: 2026-11-26. Machine: macOS 27.2 (Apple silicon). The bar names macOS 15 (was 14, see Bar changes).
+Nothing here ran on 15 yet; CI adds a `macos-15` job, not yet run.
 Decisions: Tauri 2 + Rust core, gh token first, conditional polls, subscription CLIs with a terms notice, manual publish.
 
 ## Bar (plan claim 6.1)
@@ -15,7 +16,7 @@ Decisions: Tauri 2 + Rust core, gh token first, conditional polls, subscription 
 | Usage-limit output of claude and opencode captured | claude PARTIAL: real limit lines recorded by pr-bots in text mode; raw `--output-format json` output not captured. **opencode NOT CAPTURED** | n/a | n/a |
 
 Phase 0 does not pass yet: codex, claude's JSON-mode limit, opencode's limit, and on Windows and Ubuntu: engines, GUI-launch CLI
-discovery and the 304 item. Windows 11 itself and Linux memory on a real desktop are also open. CI evidence: run 45766070962 (artifacts
+discovery and the 304 item. Windows 11 itself, macOS 15 itself and Linux memory on a real desktop are also open. CI evidence: run 45766070962 (artifacts
 `phase0-windows-latest`, `phase0-ubuntu-24.04`). In CI the engine error reads `spawn "git"` because the fixture dir is
 missing, not git.
 
@@ -27,6 +28,8 @@ missing, not git.
   app plus its children), the nearest counterpart of macOS phys_footprint, which also counts swapped and compressed
   pages. Clean private pages are left out because the kernel can drop
   them; RSS is left out because it counts shared system libraries and fails on macOS too.
+- macOS lower bound, 2026-11-28: macOS 15 instead of 14. GitHub retired its macOS 14 runners on 2026-11-02, so CI
+  cannot cover 14, and no macOS 14 machine is at hand.
 
 ## Linux memory
 
@@ -111,10 +114,11 @@ The malloc_trim row was read at 180s.
 - Linux idle memory: deferred (2026-11-27). Needs a real Ubuntu 24.04 desktop with a GPU to run
   `experiments/linux-desktop-memory.sh`. The only tester at hand has an Apple silicon Mac, and the Linux VM tried
   there (lima, see Linux memory above) renders with llvmpipe, no GPU.
-- Windows 11 and Ubuntu 24.04: `.github/workflows/phase0.yml` runs the probes, the tray app and the memory reading on
-  `windows-latest` and `ubuntu-24.04`. `windows-latest` is Windows Server 2025, not Windows 11, so a pass there is
-  evidence, not the bar. Xvfb has no tray host, so tray visibility on Linux stays unproven. CI installs no CLIs and
-  builds no fixture, so the engine items stay open on both.
+- Windows 11, Ubuntu 24.04 and macOS 15: `.github/workflows/phase0.yml` runs the probes, the tray app and the memory
+  reading on `windows-latest`, `ubuntu-24.04` and `macos-15`; the `macos-15` job has not run yet. `windows-latest` is
+  Windows Server 2025, not Windows 11, so a pass there is evidence, not the bar. Xvfb has no tray host, so tray
+  visibility on Linux stays unproven. CI installs no CLIs and builds no fixture, so the engine items stay open on all
+  three.
 - Windows signing: SignPath Foundation shows no country rule; needs an OSI licence, public repo, CI-built
   binaries, MFA, and names the Foundation as publisher. Licence is now MIT OR Apache-2.0 (both OSI). Not yet applied.
 

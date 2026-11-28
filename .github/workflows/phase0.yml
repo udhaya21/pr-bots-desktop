@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-24.04]
+        os: [windows-latest, ubuntu-24.04, macos-15]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     steps:
@@ -50,6 +50,10 @@ jobs:
       - name: Tray app (Linux)
         if: runner.os == 'Linux'
         run: ci/tray-linux.sh out
+
+      - name: Tray app (macOS)
+        if: runner.os == 'macOS'
+        run: ci/tray-macos.sh out
 
       - name: Tray app (Windows)
         if: runner.os == 'Windows'
