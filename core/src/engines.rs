@@ -93,7 +93,7 @@ fn invoke(engine: Engine, bin: &Path, ctx: &Ctx, wt: &Path, prompt: &str) -> Res
             cmd.args(["-p", prompt, "--output-format", "json", "--json-schema", SCHEMA])
                 .args(["--tools", "Read,Grep,Glob", "--permission-mode", "dontAsk"])
                 .args(["--setting-sources", "user", "--strict-mcp-config"])
-                .args(["--settings", r#"{"disableAllHooks":true}"#])
+                .args(["--settings", r#"{"disableAllHooks":true,"permissions":{"blockReadsOutsideWorkingDirectories":true}}"#])
                 .args(["--model", "sonnet", "--max-budget-usd", "1", "--no-session-persistence"]);
             let out = checked(env::run_bounded(&mut cmd, LIMIT)?)?;
             let v: Value = serde_json::from_slice(&out).context("claude stdout is not JSON")?;

@@ -62,9 +62,10 @@ The malloc_trim row was read at 180s.
    and had no shell. One run each. The core uses `OPENCODE_CONFIG_CONTENT` and also deletes the PR's agent config,
    since CONTENT has not been tested against PR `mcp`, `plugin` or `provider` keys.
 2. **opencode v2.2.2 names its tool `shell`**, not `bash` (seen in pr-bots logs). The deny config sets both.
-3. **The claude lock-down holds.** Control run in the hostile fixture without the lock flags: the PR's SessionStart
-   hook, PreToolUse hook and MCP server all ran. With `--setting-sources user --strict-mcp-config
-   --settings {"disableAllHooks":true} --tools Read,Grep,Glob`, the model made a Read call (2 turns) and none ran.
+3. **The claude lock-down holds against PR hooks and MCP servers** (reads outside the worktree: see 10). Control run
+   in the hostile fixture without the lock flags: the PR's SessionStart hook, PreToolUse hook and MCP server all ran.
+   With `--setting-sources user --strict-mcp-config --settings {"disableAllHooks":true} --tools Read,Grep,Glob`, the
+   model made a Read call (2 turns) and none ran.
 4. **An empty `GH_CONFIG_DIR` does not hide the gh token.** `gh auth token` still returned the keychain token while
    `gh auth status` said not logged in. Plan claim 4.1 is wrong. A placeholder `GH_TOKEN` shadows it for gh. Any
    engine with a shell can still read the keychain directly (`security find-generic-password`); codex is the one to test.
@@ -78,6 +79,13 @@ The malloc_trim row was read at 180s.
    as `-1` (strace: `-999999` became `kill(-9, SIGKILL)`). In a VM the tray app's first spawn ended the whole login
    session. CI passed by luck of its pid values. The core now calls `killpg`, with a test that a grandchild dies and
    the test process lives.
+10. **An allow rule lets the locked claude read outside the worktree; `blockReadsOutsideWorkingDirectories` stops
+    it.** With no allow rule, `dontAsk` refused a Read of a file outside the cwd. With an allow rule for that dir,
+    passed via `--settings` to stand in for a user rule (`--setting-sources user` loads those; not tested from user
+    settings), the read went through. Adding `"permissions":{"blockReadsOutsideWorkingDirectories":true}` refused
+    it, and in the fixture a Read inside the cwd worked and the marks dir held no hook marker after. Read only, not Grep
+    or Glob; user `additionalDirectories` untested. claude 2.1.332, one run each, 2026-11-28. The core and
+    `lockdown.sh` now set it.
 
 ## Usage-limit text captured
 
@@ -90,7 +98,8 @@ The malloc_trim row was read at 180s.
 ## Known gaps in the spike code (Phase 1)
 
 - Prompt and diff go in argv; a large PR hits ARG_MAX. Pass them on stdin.
-- `AGENTS.md` and `CLAUDE.md` stay in the worktree. They are prompt text, not engine config; decide whether to drop them.
+- `AGENTS.md` and `CLAUDE.md` stay in the worktree. Decided 2026-11-28: delete them for every engine and pass the base
+  branch copies in the prompt, as the plan's API mode does for AGENTS.md, so the PR cannot rewrite them. Not built.
 - Only the GitHub token vars are scrubbed; other secrets in the user's env reach the engine. `GH_ENTERPRISE_TOKEN` has no placeholder, so GHES likely still falls back to the keychain.
 - Engines run in their own process group: Ctrl-C on `phase0` or Quit mid-run leaves them running. A grandchild that calls `setsid` escapes the group kill and can hang the pipe drain.
 - The run guard is not reset if the probe thread panics.

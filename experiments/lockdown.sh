@@ -35,7 +35,7 @@ run_case codex codex exec "$(ask $out/mark-codex/model-shell)" -s read-only --ig
 # claude: project hooks, .mcp.json and AGENTS.md present; locked flags.
 run_case claude claude -p "$(ask $out/mark-claude/model-shell)" --output-format json \
   --tools Read,Grep,Glob --permission-mode dontAsk --setting-sources user --strict-mcp-config \
-  --settings '{"disableAllHooks":true}' --model sonnet --max-budget-usd 1 --no-session-persistence
+  --settings '{"disableAllHooks":true,"permissions":{"blockReadsOutsideWorkingDirectories":true}}' --model sonnet --max-budget-usd 1 --no-session-persistence
 
 # codex network under read-only, outside any fixture.
 mkdir -p $out/net && cd $out/net
@@ -48,5 +48,5 @@ P='Use the Read tool to read src/slots.ts, then reply with the single word done.
 run_case claude-open claude -p "$P" --output-format json --tools Read --permission-mode dontAsk \
   --model sonnet --max-budget-usd 1 --no-session-persistence
 run_case claude-lock claude -p "$P" --output-format json --tools Read,Grep,Glob --permission-mode dontAsk \
-  --setting-sources user --strict-mcp-config --settings '{"disableAllHooks":true}' \
+  --setting-sources user --strict-mcp-config --settings '{"disableAllHooks":true,"permissions":{"blockReadsOutsideWorkingDirectories":true}}' \
   --model sonnet --max-budget-usd 1 --no-session-persistence
